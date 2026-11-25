@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cristal Eterno</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Alegreya+Sans:wght@400;700&display=swap">
+<style>
+:root{--bg:#060a1c;--w1:#1c2f9c;--w2:#0b1352;--bd:#e6eaff;--tx:#f1f3ff;--mut:#9ba8ea;--hp:#56dd77;--mp:#58b2ff;--atb:#ffd04a;--lim:#ff8a3d;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at 50% 0,#16206b 0,var(--bg) 60%) fixed;color:var(--tx);font:17px/1.45 "Alegreya Sans",Georgia,serif;min-height:100vh}
+#app{max-width:620px;margin:0 auto;padding:10px}
+.win{background:linear-gradient(180deg,var(--w1),var(--w2));border:2px solid var(--bd);border-radius:10px;padding:12px 14px;margin-bottom:10px;box-shadow:0 0 0 2px #0a1040,0 6px 24px #0008}
+.win.sel{border-color:var(--atb)}
+h2{font:600 1.15rem Cinzel,Georgia,serif;margin:0 0 6px;letter-spacing:.03em}
+p{margin:.3em 0}.mut,.sub{color:var(--mut)}.sub{font-size:14px}.who{color:var(--atb);margin:0 0 4px}
+button,select{font:inherit;color:var(--tx);background:#ffffff14;border:1px solid #ffffff44;border-radius:6px;padding:8px 12px}
+button{display:block;width:100%;text-align:left;margin:6px 0 0;cursor:pointer}
+select{background:#0b1352;max-width:100%}
+button:hover:not(:disabled),button:focus-visible{background:#ffffff2e;outline:2px solid var(--atb);outline-offset:1px}
+button:disabled{opacity:.4;cursor:default}button.on{border-color:var(--atb);background:#ffd04a22}
+#tabs{display:flex;gap:4px;margin-bottom:10px}#tabs button{margin:0;text-align:center;padding:8px 2px;font-size:14px;flex:1}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:0 8px}
+.bar{position:relative;height:14px;background:#0008;border:1px solid #fff5;border-radius:7px;overflow:hidden;margin:3px 0}
+.bar.t{height:6px}.bar i{position:absolute;inset:0 auto 0 0}.bar s{position:absolute;inset:0;text-decoration:none;font-size:11px;line-height:12px;text-align:center;text-shadow:0 1px 2px #000}
+.hp i{background:var(--hp)}.mp i{background:var(--mp)}.atb i{background:var(--atb)}.xp i{background:var(--lim)}
+.en{display:flex;gap:10px;align-items:center;margin:6px 0}.em{font-size:1.8rem}.en>div{flex:1}.ko{opacity:.3}
+.lg p{margin:1px 0;font-size:15px;color:var(--mut)}.lg p:last-child{color:#fff}
+.it{padding:8px 0;border-top:1px solid #ffffff22}
+.slots{display:flex;align-items:center;gap:4px;flex-wrap:wrap}.slots button{width:auto;margin:0}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row button{width:auto;margin:0}
+</style></head>
+<body><div id="app">
+<div class="win" id="hd"></div>
+<div id="tabs"></div>
+<div id="main"></div>
+</div>
+<script>
+const $=s=>document.querySelector(s),R=a=>a[Math.random()*a.length|0],M=Math;
+const STN={hp:'PV',mp:'PM',atk:'ATK',mag:'MAG',def:'DEF',spd:'VEL'},SLN={w:'Arma',a:'Armadura',c:'Accesorio'};
+const RAR=[['Común','#cfd6ff'],['Poco común','#6be58a'],['Rara','#59b4ff'],['Épica','#c77dff'],['Legendaria','#ffb23d']],RM=[1,1.4,1.9,2.6,3.6],RP=[.55,.28,.12,.04,.01],TH=[60,250,800,2500];
+const CL={
+ lu:{n:'Luchador',e:'⚔️',g:{atk:1.6,hp:9},mb:{atk:5},mt:'+5 ATK',sk:[['golpe',1],['giro',4]]},
+ ma:{n:'Mago',e:'🔮',g:{mag:1.8,mp:4},mb:{mag:5},mt:'+5 MAG',sk:[['medit',1],['nova',4]]},
+ pi:{n:'Pícaro',e:'🗡️',g:{spd:.35,atk:.8},mb:{spd:2,crit:.05},mt:'+2 VEL y +5% crítico',sk:[['pun',1],['danza',4]]},
+ cl:{n:'Clérigo',e:'✨',g:{hp:7,mag:.9,def:.5},mb:{hp:30,def:3},mt:'+30 PV y +3 DEF',sk:[['plega',1],['cast',4]]},
+ dr:{n:'Caballero Dragón',e:'🐉',g:{atk:1.3,spd:.25,hp:5},mb:{atk:3,crit:.03},mt:'+3 ATK y +3% crítico',sk:[['salto',1],['estocada',4],['estelar',7]]},
+ sm:{n:'Samurái',e:'🌸',g:{atk:1.4,spd:.3},mb:{crit:.05,spd:1},mt:'+5% crítico y +1 VEL',sk:[['hakaze',1],['yukikaze',4],['setsu',7]]},
+ mn:{n:'Mago Negro',e:'🌑',g:{mag:2,mp:5},mb:{mag:3,mp:15},mt:'+3 MAG y +15 PM',sk:[['fuego4',1],['rayo3',4],['flare',7]]},
+ iv:{n:'Invocador',e:'🐲',g:{mag:1.6,hp:4,mp:3},mb:{mag:2,hp:20},mt:'+2 MAG y +20 PV',sk:[['ruina',1],['fenix',4],['bahamut',7]]},
+ ba:{n:'Bardo',e:'🎻',g:{atk:1.1,spd:.3,mp:2},mb:{mp:10,spd:1},mt:'+10 PM y +1 VEL',sk:[['tiro',1],['balada',4],['lluvia',7]]},
+ pa:{n:'Paladín',e:'🛡️',g:{hp:10,def:1,atk:.8},mb:{def:4,hp:20},mt:'+4 DEF y +20 PV',sk:[['veloz',1],['interv',4],['confit',7]]},
+ rm:{n:'Mago Rojo',e:'🎩',g:{atk:.9,mag:1,hp:3},mb:{atk:2,mag:2},mt:'+2 ATK y +2 MAG',sk:[['sacud',1],['riposta',4],['verflare',7]]}};
+const SK={atk:{n:'Atacar'},
+ golpe:{n:'Golpe poderoso',cost:4,k:'p',pow:2.2},giro:{n:'Tajo giratorio',cost:8,k:'p',pow:1.4,all:1},
+ medit:{n:'Meditación',cost:0,k:'mp',pow:.25},nova:{n:'Nova arcana',cost:12,k:'m',pow:3.2},
+ pun:{n:'Puñalada',cost:3,k:'p',pow:1.6,crit:.3},danza:{n:'Danza de cuchillas',cost:7,k:'p',pow:.8,hits:3},
+ plega:{n:'Plegaria',cost:6,k:'h',pow:3},cast:{n:'Castigo',cost:8,k:'m',pow:1.8,vamp:.5},
+ salto:{n:'Salto',cost:5,k:'p',pow:2.4},estocada:{n:'Estocada fatal',cost:9,k:'p',pow:1.5,hits:2},estelar:{n:'Buceo estelar',cost:15,k:'p',pow:4.4,crit:.2},
+ hakaze:{n:'Hakaze',cost:2,k:'p',pow:1.4,crit:.15},yukikaze:{n:'Yukikaze',cost:6,k:'p',pow:2.1,crit:.25},setsu:{n:'Midare Setsugekka',cost:16,k:'p',pow:1.7,hits:3,crit:.3},
+ fuego4:{n:'Fuego IV',cost:8,k:'m',pow:2.6,el:'fuego'},rayo3:{n:'Trueno III',cost:8,k:'m',pow:2.6,el:'rayo'},flare:{n:'Llamarada',cost:20,k:'m',pow:2.8,all:1,el:'fuego'},
+ ruina:{n:'Ruina III',cost:4,k:'m',pow:2},fenix:{n:'Invocar Fénix',cost:14,k:'m',pow:2.6,vamp:.6,el:'fuego'},bahamut:{n:'Invocar Bahamut',cost:22,k:'m',pow:2.2,all:1,hits:2},
+ tiro:{n:'Tiro fuerte',cost:3,k:'p',pow:1.7},balada:{n:'Balada del mago',cost:0,k:'mp',pow:.35},lluvia:{n:'Lluvia de la muerte',cost:10,k:'p',pow:1,all:1,hits:2},
+ veloz:{n:'Espada veloz',cost:2,k:'p',pow:1.5},interv:{n:'Intervención',cost:7,k:'h',pow:2.4},confit:{n:'Confiteor',cost:14,k:'m',pow:3.8},
+ sacud:{n:'Sacudida',cost:4,k:'m',pow:2},riposta:{n:'Riposta',cost:8,k:'p',pow:2.6,crit:.1},verflare:{n:'Verflare',cost:14,k:'m',pow:3.7,el:'fuego'}};
+const MAT={
+ fuego:{n:'Fuego',e:'🔥',ty:'m',k:'m',cost:5,pow:1.8,p:150,d:'Magia de fuego.'},
+ hielo:{n:'Hielo',e:'❄️',ty:'m',k:'m',cost:5,pow:1.8,p:150,d:'Magia de hielo.'},
+ rayo:{n:'Rayo',e:'⚡',ty:'m',k:'m',cost:6,pow:2.1,p:200,d:'Magia de rayo.'},
+ cura:{n:'Cura',e:'💚',ty:'m',k:'h',cost:6,pow:2.5,p:200,d:'Magia: recupera PV.'},
+ doble:{n:'Doble tajo',e:'🗡️',ty:'c',k:'p',cost:3,pow:1.1,hits:2,p:300,d:'Comando: golpea dos veces.'},
+ robar:{n:'Robar',e:'🪙',ty:'c',k:'steal',cost:2,p:250,d:'Comando: roba oro al enemigo.'},
+ todo:{n:'Todo',e:'🌐',ty:'s',p:400,d:'Apoyo: la vecina golpea a todos (+60% PM).'},
+ pot:{n:'Potenciar',e:'📈',ty:'s',p:350,d:'Apoyo: +35% de poder a la vecina (+25% PM).'},
+ vamp:{n:'Vampiro',e:'🩸',ty:'s',p:350,d:'Apoyo: la vecina te cura el 30% del daño.'},
+ llama:{n:'Llamarada',e:'☄️',ty:'m',k:'m',cost:14,pow:3.6,el:'fuego',p:700,d:'Magia de fuego avanzada.'},
+ ventisca:{n:'Ventisca',e:'🌨️',ty:'m',k:'m',cost:14,pow:3.6,el:'hielo',p:700,d:'Magia de hielo avanzada.'},
+ tormenta:{n:'Tormenta',e:'🌩️',ty:'m',k:'m',cost:15,pow:3.9,el:'rayo',p:800,d:'Magia de rayo avanzada.'},
+ santo:{n:'Santo',e:'🌟',ty:'m',k:'m',cost:12,pow:3.2,p:650,d:'Magia sagrada.'},
+ medica:{n:'Médica',e:'💖',ty:'m',k:'h',cost:12,pow:4.5,p:650,d:'Magia: gran curación.'}};
+const PAS={vig:['Vigor','+4% PV'],fuer:['Fuerza','+4% ATK'],ment:['Intelecto','+4% MAG'],piel:['Piel de roca','+4% DEF'],prisa:['Presteza','+3% VEL'],crit:['Ojo certero','+3% prob. crítico'],dest:['Golpe brutal','+10% daño crítico'],vamp:['Sed de sangre','+2% robo de vida'],botin:['Codicia','+8% oro'],sabi:['Estudioso','+6% EXP de clase'],suerte:['Fortuna','Mejor rareza de botín'],eco:['Reflejos','+3% de actuar otra vez']};
+const ZN=[{n:'Pradera',e:'🌿',w:'fuego',a:'de la pradera',en:[['Slime','🟢'],['Lobo','🐺'],['Abeja','🐝']]},
+ {n:'Bosque umbrío',e:'🌲',w:'fuego',a:'del bosque',en:[['Ent','🌳'],['Araña','🕷️'],['Jabalí','🐗']]},
+ {n:'Cueva eco',e:'🦇',w:'rayo',a:'de la cueva',en:[['Murciélago','🦇'],['Golem','🪨'],['Cangrejo','🦀']]},
+ {n:'Volcán',e:'🌋',w:'hielo',a:'ígneo',en:[['Salamandra','🦎'],['Imp','👺'],['Magma','🔥']]},
+ {n:'Ruinas glaciales',e:'🧊',w:'rayo',a:'glacial',en:[['Yeti','🦣'],['Espectro','👻'],['Lobo gélido','🐺']]},
+ {n:'Abismo',e:'🌑',w:'hielo',a:'abisal',en:[['Sombra','👤'],['Horror','🐙'],['Demonio','😈']]}];
+const BS={w:[['Espada',{atk:1,mag:.2}],['Bastón',{mag:1,atk:.2}],['Daga',{atk:.7,spd:.15}]],a:[['Cota',{hp:8,def:.8}],['Túnica',{hp:6,def:.5,mag:.3}],['Peto',{hp:10,def:.6}]],c:[['Anillo',{atk:.4,mag:.4}],['Amuleto',{hp:4,def:.3,spd:.15}],['Brazalete',{spd:.2,atk:.3}]]};
+const def=()=>({tab:'c',cls:'lu',cx:{lu:0,ma:0,pi:0,cl:0},sx:{},pas:{},gold:60,z:0,w:[0,0,0,0,0,0],zc:[0,0,0,0,0,0],auto:'atk',on:0,inv:[],mat:[{u:1,t:'fuego',ap:0}],mu:2,
+ eq:{w:{s:'w',r:0,n:'Espada de hierro',t:0,st:{atk:4,mag:1},sl:[1],val:5},a:{s:'a',r:0,n:'Peto de cuero',t:0,st:{hp:25,def:3},sl:[null],val:5}}});
+let S,ST,E=[],RW,hp,mp,atb=0,wait=0,lg=[],sel=null,rc=0;
+function save(){try{localStorage.setItem('cristal-eterno',JSON.stringify(S))}catch(e){}}
+function load(){let d=def();try{const x=JSON.parse(localStorage.getItem('cristal-eterno'));if(x)d={...d,...x}}catch(e){}d.tab='c';return d}
+const need=l=>M.round(40*M.pow(l,1.7));
+function clvx(k){let x=S.cx[k],l=1;while(l<10&&x>=need(l)){x-=need(l);l++}return[l,l>=10?0:x]}
+const lv=k=>clvx(k)[0],skLv=k=>M.min(10,1+M.floor(M.sqrt((S.sx[k]||0)/6))),mlv=m=>1+TH.filter(x=>m.ap>=x).length;
+const spent=()=>Object.values(S.pas).reduce((a,r)=>a+r*(r+1)/2,0);
+const pts=()=>Object.keys(CL).reduce((a,k)=>a+lv(k)-1,0)+Object.keys(SK).reduce((a,k)=>a+skLv(k)-1,0)-spent();
+function stats(){
+ const c=CL[S.cls],l=lv(S.cls),s={hp:100,mp:30,atk:10,mag:10,def:3,spd:5,crit:.05,cd:1.5},p=n=>S.pas[n]||0;
+ for(const k in c.g)s[k]+=c.g[k]*l;
+ for(const k in CL)if(lv(k)>=10)for(const j in CL[k].mb)s[j]+=CL[k].mb[j];
+ Object.values(S.eq).forEach(it=>{for(const j in it.st)s[j]+=it.st[j]});
+ s.hp*=1+.04*p('vig');s.atk*=1+.04*p('fuer');s.mag*=1+.04*p('ment');s.def*=1+.04*p('piel');s.spd*=1+.03*p('prisa');
+ s.crit+=.03*p('crit');s.cd+=.1*p('dest');
+ ['hp','mp','atk','mag','def','spd'].forEach(k=>s[k]=M.round(s[k]));return s}
+function recalc(){ST=stats();hp=M.min(hp==null?ST.hp:hp,ST.hp);mp=M.min(mp==null?ST.mp:mp,ST.mp)}
+const say=m=>{lg.push(m);lg=lg.slice(-5)};
+const mById=u=>S.mat.find(x=>x.u==u);
+
+/* ---- comandos ---- */
+function cmds(){
+ const L=[],l=lv(S.cls),sk=id=>1+.1*(skLv(id)-1);
+ L.push({id:'atk',n:'Atacar',cost:0,k:'p',pow:sk('atk'),sk:'atk'});
+ CL[S.cls].sk.forEach(([id,rq])=>{if(l>=rq){const d=SK[id];L.push({...d,id,pow:d.pow*sk(id),sk:id})}});
+ Object.values(S.eq).forEach(it=>it.sl.forEach((u,i)=>{
+  const m=mById(u),d=m&&MAT[m.t];if(!d||d.ty=='s')return;
+  const c={...d,id:'m'+u,pow:(d.pow||0)*(1+.15*(mlv(m)-1)),el:d.ty=='m'&&d.k=='m'?(d.el||m.t):0};
+  [it.sl[i-1],it.sl[i+1]].forEach(n=>{const s=mById(n);if(!s||MAT[s.t].ty!='s')return;
+   if(s.t=='todo'){c.all=1;c.cost=M.round(c.cost*1.6)}if(s.t=='pot'){c.pow*=1.35;c.cost=M.round(c.cost*1.25)}if(s.t=='vamp')c.vamp=.3});
+  L.push(c)}));
+ return L}
+const cmdById=id=>cmds().find(c=>c.id==id)||cmds()[0];
+const cd=c=>c.k=='h'?'curación ×'+c.pow.toFixed(1):c.k=='mp'?'recupera PM':c.k=='steal'?'robo':(c.k=='m'?'mágico ':'físico ')+'×'+c.pow.toFixed(1)+(c.all?' · todos':'')+(c.hits>1?' · '+c.hits+' golpes':'')+(c.el&&c.el==ZN[S.z].w?' · ¡débil!':'');
+
+/* ---- combate ---- */
+function wave(){
+ const t=S.z,z=ZN[t],boss=(S.w[t]+1)%10==0,n=boss?1:1+(Math.random()<.45)+(t>0&&Math.random()<.2),f=boss?5:1;
+ E=[];for(let i=0;i<n;i++){const b=R(z.en);E.push({n:(boss?'Jefe ':'')+b[0],em:boss?'👹':b[1],mhp:M.round(36*1.75**t*f),atk:8*1.5**t*(boss?1.5:1),spd:boss?3.5:3+Math.random()*1.5,atb:Math.random()*40,g:M.round(4*1.6**t*f),x:M.round(6*1.5**t*f),a:(4+2*t)*(boss?4:1),boss});E[i].hp=E[i].mhp}
+ RW={x:0,g:0,a:0}}
+function tick(){
+ if(wait)return;
+ mp=M.min(ST.mp,mp+ST.mp*.0008);atb=M.min(100,atb+ST.spd*.8);
+ if(atb>=100){if(S.on)act(cmdById(S.auto));else{wait=1;rcmd();draw();return}}
+ for(const e of E)if(e.hp>0){e.atb+=e.spd*.8;if(e.atb>=100){e.atb=0;const v=M.max(1,M.round(e.atk*e.atk/(e.atk+ST.def*1.5)*(.9+Math.random()*.2)));hp-=v;say(`${e.n} te hiere (-${v})`)}}
+ if(hp<=0){say('Has caído… vuelves a empezar el ciclo de la zona.');hp=ST.hp;mp=ST.mp;S.w[S.z]-=S.w[S.z]%10;wave();rcmd()}
+ draw()}
+function act(c){
+ if(mp<c.cost)c=cmds()[0];
+ mp-=c.cost;atb=0;wait=0;if(c.sk)S.sx[c.sk]=(S.sx[c.sk]||0)+1;
+ const al=E.filter(e=>e.hp>0),T=c.all?al:[al[0]],o=[];let tot=0;
+ if(c.k=='h'){const v=M.round(ST.mag*c.pow*(.9+Math.random()*.2));hp=M.min(ST.hp,hp+v);o.push('+'+v+' PV')}
+ else if(c.k=='mp'){const v=M.round(ST.mp*c.pow);mp=M.min(ST.mp,mp+v);o.push('+'+v+' PM')}
+ else if(c.k=='steal'){if(Math.random()<.6){const g=al[0].g*3;S.gold+=g;o.push('roba '+g+' 🪙')}else o.push('falla')}
+ else for(let h=0;h<(c.hits||1);h++)T.forEach(t=>{if(t.hp<=0)return;const cr=Math.random()<ST.crit+(c.crit||0);
+  let v=(c.k=='m'?ST.mag:ST.atk)*c.pow*(.9+Math.random()*.2);if(c.el&&c.el==ZN[S.z].w)v*=1.5;if(cr)v*=ST.cd;v=M.round(v);t.hp-=v;tot+=v;o.push(`${t.n} -${v}${cr?'!':''}`)});
+ const vl=(c.vamp||0)+.02*(S.pas.vamp||0);if(tot&&vl)hp=M.min(ST.hp,hp+M.round(tot*vl));
+ say(`${c.n}: ${o.join(', ')}`);
+ E.forEach(e=>{if(e.hp<=0&&!e.d){e.d=1;RW.x+=e.x;RW.g+=e.g;RW.a+=e.a}});
+ if(E.every(e=>e.hp<=0)){win();return}
+ if(Math.random()<.03*(S.pas.eco||0))atb=100;
+ rcmd();draw()}
+function win(){
+ const t=S.z,boss=E[0].boss,o=lv(S.cls);S.w[t]++;if(boss)S.zc[t]=1;
+ S.cx[S.cls]+=M.round(RW.x*(1+.06*(S.pas.sabi||0)));S.gold+=M.round(RW.g*(1+.08*(S.pas.botin||0)));
+ Object.values(S.eq).forEach(it=>it.sl.forEach(u=>{const x=mById(u);if(x){const l=mlv(x);x.ap+=RW.a;if(mlv(x)>l)say(`${MAT[x.t].n} sube a nivel ${mlv(x)}`)}}));
+ if(lv(S.cls)>o){say(`¡${CL[S.cls].n} sube a nivel ${lv(S.cls)}!`+(lv(S.cls)>=10?' Maestría: bonus permanente.':''));recalc()}
+ if(boss)say('¡Jefe derrotado!'+(t<5?' Nueva zona disponible.':''));
+ if(boss||Math.random()<.5)drop(t,boss);
+ if(Math.random()<(boss?.4:.07)){const m={u:S.mu++,t:R(Object.keys(MAT)),ap:0};S.mat.push(m);say('Materia: '+MAT[m.t].n)}
+ hp=M.min(ST.hp,hp+ST.hp*.25);mp=M.min(ST.mp,mp+ST.mp*.2);save();wave();rcmd();draw()}
+function drop(t,boss){
+ const L=S.pas.suerte||0,w=RP.map((p,i)=>boss&&i<2?0:p*(1+L*.35*i));let x=Math.random()*w.reduce((a,b)=>a+b),r=0;for(;r<4&&x>=w[r];r++)x-=w[r];
+ const s=R(['w','w','a','a','c']),b=R(BS[s]),p=2.5*1.6**t*RM[r]*(.85+Math.random()*.3),st={};
+ for(const k in b[1])st[k]=M.max(1,M.round(p*b[1][k]));
+ const it={s,r,t,n:`${b[0]} ${ZN[t].a}`,st,sl:Array(s=='c'?(r>=3?2:1):[1,2,2,3,4][r]).fill(null),val:M.round(p*(r+1)*1.5)};
+ if(S.inv.length>=40){S.gold+=it.val;return}
+ S.inv.push(it);S.inv.sort((a,b)=>b.r-a.r||b.t-a.t);say(`Botín: ${it.n} (${RAR[r][0]})`)}
+
+/* ---- interfaz ---- */
+const bar=(v,m,c,l,t)=>`<div class="bar ${c}${t?' t':''}"><i style="width:${M.max(0,M.min(100,v/m*100))}%"></i>${l?`<s>${l}</s>`:''}</div>`;
+const istr=it=>Object.keys(it.st).map(k=>`${STN[k]} +${it.st[k]}`).join(' · ');
+function draw(){
+ $('#hd').innerHTML=`<b>${CL[S.cls].e} ${CL[S.cls].n} Nv ${lv(S.cls)}</b> · 🪙 ${S.gold}`;
+ const b=$('#bars');if(!b||S.tab!='c')return;const z=ZN[S.z];
+ b.innerHTML=`<p class="sub">${z.e} ${z.n} · oleada ${S.w[S.z]%10+1}/10${(S.w[S.z]+1)%10==0?' (¡jefe!)':''} · débil a ${MAT[z.w].e}</p>`
+ +E.map(e=>`<div class="en ${e.hp<=0?'ko':''}"><span class="em">${e.em}</span><div><b>${e.n}</b>${bar(e.hp,e.mhp,'hp',M.max(0,e.hp)+' / '+e.mhp)}${bar(e.atb,100,'atb','',1)}</div></div>`).join('')
+ +`<div class="lg" style="margin:8px 0">${lg.map(l=>`<p>${l}</p>`).join('')}</div><b>Héroe</b>${bar(hp,ST.hp,'hp','PV '+M.ceil(hp)+' / '+ST.hp)}${bar(mp,ST.mp,'mp','PM '+M.floor(mp)+' / '+ST.mp)}${bar(atb,100,'atb','',1)}<p class="sub">ATK ${ST.atk} · MAG ${ST.mag} · DEF ${ST.def} · VEL ${ST.spd} · Crít ${M.round(ST.crit*100)}%</p>`}
+function rcmd(){
+ const e=$('#cmd');if(!e)return;
+ e.innerHTML=wait?'<p class="who">Tu turno</p><div class="grid">'+cmds().map((c,i)=>`<button ${mp<c.cost?'disabled':''} onclick="act(cmds()[${i}])">${c.n}<br><span class="sub">${c.cost?c.cost+' PM · ':''}${cd(c)}</span></button>`).join('')+'</div>':`<p class="mut">${S.on?'Combate automático en marcha…':'Esperando a que se llene tu barra…'}</p>`}
+function tg(){S.on^=1;if(S.on&&wait)act(cmdById(S.auto));render()}
+function setZ(v){S.z=+v;lg=[];wave();render()}
+function setC(k){S.cls=k;if(!cmds().some(c=>c.id==S.auto))S.auto='atk';recalc();save();render()}
+const T={};
+T.c=()=>`<div class="win"><div class="row"><select onchange="setZ(this.value)">${ZN.map((z,i)=>i==0||S.zc[i-1]?`<option value="${i}" ${i==S.z?'selected':''}>${z.e} ${z.n}</option>`:'').join('')}</select><span class="sub">Vence al jefe (oleada 10) para abrir la siguiente zona.</span></div><div id="bars"></div></div>
+<div class="win"><div class="row"><button onclick="tg()" class="${S.on?'on':''}">Auto: ${S.on?'ACTIVO':'apagado'}</button><span class="sub">usa</span><select onchange="S.auto=this.value;save()">${cmds().map(c=>`<option value="${c.id}" ${c.id==S.auto?'selected':''}>${c.n}</option>`).join('')}</select></div><div id="cmd" style="margin-top:8px"></div></div>`;
+T.k=()=>`<p class="sub" style="margin:0 0 8px">Cada clase sube con la EXP que ganas mientras está activa. Al llegar a Nv 10 te da un bonus permanente que conservas con cualquier clase. Atacar: Nv ${skLv('atk')}.</p>`+Object.keys(CL).map(k=>{const[l,x]=clvx(k),c=CL[k];
+ return `<div class="win ${k==S.cls?'sel':''}"><h2>${c.e} ${c.n} <span class="sub">Nv ${l}/10</span></h2>${bar(x,need(l),'xp',l>=10?'MAESTRÍA':x+' / '+need(l))}<p class="sub">Maestría: ${c.mt} permanentes ${l>=10?'✅':''}</p>`
+ +c.sk.map(([id,rq])=>`<p class="sub">${l>=rq?'•':'🔒'} ${SK[id].n} — habilidad Nv ${skLv(id)}${l>=rq?'':' (clase Nv '+rq+')'}</p>`).join('')
+ +`<button onclick="setC('${k}')" ${k==S.cls?'disabled':''}>${k==S.cls?'Clase activa':'Cambiar a '+c.n}</button></div>`}).join('');
+const card=(it,b)=>`<div class="it"><b style="color:${RAR[it.r][1]}">${it.n}</b> <span class="sub">${RAR[it.r][0]} · ${SLN[it.s]} · ${it.sl.length} ranura${it.sl.length>1?'s':''}</span><br><span class="sub">${istr(it)}</span>${b}</div>`;
+T.e=()=>'<div class="win"><h2>Equipado</h2>'+['w','a','c'].map(s=>S.eq[s]?card(S.eq[s],''):`<p class="mut">${SLN[s]}: vacío</p>`).join('')+`</div><div class="win"><h2>Mochila (${S.inv.length}/40)</h2><button onclick="sellLow()">Vender comunes y poco comunes</button>`
+ +S.inv.map((it,i)=>card(it,`<div class="grid"><button onclick="equip(${i})">Equipar</button><button onclick="sell(${i})">Vender ${it.val} 🪙</button></div>`)).join('')+'</div>';
+function equip(i){const it=S.inv.splice(i,1)[0],o=S.eq[it.s];S.eq[it.s]=it;if(o){S.inv.push(o);S.inv.sort((a,b)=>b.r-a.r||b.t-a.t)}sel=null;recalc();save();render()}
+function sell(i){S.gold+=S.inv[i].val;S.inv.splice(i,1);save();render()}
+function sellLow(){S.inv=S.inv.filter(it=>{if(it.r<2){S.gold+=it.val;return 0}return 1});save();render()}
+T.m=()=>{
+ let h='<div class="win"><h2>Ranuras</h2><p class="sub">Las materias de apoyo (🌐 📈 🩸) modifican a la materia vecina ⛓️ dentro del mismo objeto.</p>';
+ ['w','a','c'].forEach(s=>{const it=S.eq[s];if(!it)return;h+=`<p style="margin-top:8px"><b>${SLN[s]}</b> <span class="sub">${it.n}</span></p><div class="slots">`+it.sl.map((u,i)=>{const m=mById(u),on=sel&&sel[0]==s&&sel[1]==i;return(i?'<span>⛓️</span>':'')+`<button class="${on?'on':''}" onclick="selS('${s}',${i})">${m?MAT[m.t].e+' '+MAT[m.t].n+' N'+mlv(m):'vacía'}</button>`}).join('')+'</div>'});
+ h+='</div><div class="win"><h2>Tus materias</h2>'+(sel?'<button onclick="put(0)">Vaciar ranura elegida</button>':'<p class="mut">Elige una ranura para colocar materia.</p>');
+ const used=u=>[...Object.values(S.eq),...S.inv].some(it=>it.sl.includes(u));
+ h+=S.mat.map(m=>{const d=MAT[m.t],l=mlv(m);return `<div class="it"><b>${d.e} ${d.n}</b> Nv ${l} <span class="sub">· AP ${m.ap}${l<5?' / '+TH[l-1]:' (máx)'}${used(m.u)?' · en uso':''}</span><br><span class="sub">${d.d}</span>${sel?`<button onclick="put(${m.u})">Colocar en la ranura</button>`:''}</div>`}).join('')+'</div>';
+ h+=`<div class="win"><h2>Tienda · ${S.gold} 🪙</h2>`+Object.keys(MAT).map(k=>`<button onclick="buy('${k}')" ${S.gold<MAT[k].p?'disabled':''}>${MAT[k].e} ${MAT[k].n} — ${MAT[k].p} 🪙<br><span class="sub">${MAT[k].d}</span></button>`).join('')+'</div>';return h};
+const selS=(s,i)=>{sel=sel&&sel[0]==s&&sel[1]==i?null:[s,i];render()};
+function put(u){if(!sel)return;if(u)[...Object.values(S.eq),...S.inv].forEach(it=>it.sl=it.sl.map(x=>x==u?null:x));S.eq[sel[0]].sl[sel[1]]=u||null;if(!cmds().some(c=>c.id==S.auto))S.auto='atk';save();render()}
+function buy(k){if(S.gold<MAT[k].p)return;S.gold-=MAT[k].p;S.mat.push({u:S.mu++,t:k,ap:0});save();render()}
+T.p=()=>`<div class="win"><h2>Puntos disponibles: ${pts()}</h2><p class="sub">Ganas 1 punto por cada nivel de clase y de habilidad (las habilidades suben al usarlas). Cada rango cuesta uno más que el anterior.</p>`
+ +Object.keys(PAS).map(k=>{const r=S.pas[k]||0,c=r+1;return `<button onclick="buyP('${k}')" ${r>=5||pts()<c?'disabled':''}><b>${PAS[k][0]}</b> ${'●'.repeat(r)}${'○'.repeat(5-r)}<br><span class="sub">${PAS[k][1]}${r<5?' · cuesta '+c:' · máximo'}</span></button>`}).join('')
+ +`<button onclick="rs()" style="margin-top:14px">${rc?'Pulsa otra vez para borrar todo':'Borrar progreso'}</button></div>`;
+function buyP(k){const r=S.pas[k]||0;if(r>=5||pts()<r+1)return;S.pas[k]=r+1;recalc();save();render()}
+function rs(){if(!rc){rc=1;render();return}rc=0;try{localStorage.removeItem('cristal-eterno')}catch(e){}S=def();hp=mp=null;recalc();hp=ST.hp;mp=ST.mp;lg=[];wave();render()}
+const TB=[['c','⚔️ Lucha'],['k','🎓 Clases'],['e','🎒 Equipo'],['m','💎 Materia'],['p','🌟 Pasivas']];
+function render(){
+ $('#tabs').innerHTML=TB.map(([k,l])=>`<button class="${S.tab==k?'on':''}" onclick="S.tab='${k}';rc=0;render()">${l}</button>`).join('');
+ $('#main').innerHTML=T[S.tab]();draw();rcmd()}
+try{const W=window.Telegram&&Telegram.WebApp;if(W){W.ready();W.expand();W.setHeaderColor('#0b1352');W.setBackgroundColor('#060a1c')}}catch(e){}
+S=load();recalc();hp=ST.hp;mp=ST.mp;lg=['Tu aventura comienza. Sin historia, solo botín.'];wave();render();
+setInterval(tick,100);setInterval(save,8000);
+</script></body></html>
